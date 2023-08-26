@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+	<title>DD-IX Hackday #01</title>
+
+	<link rel="stylesheet" href="modules/reveal.js/dist/reset.css">
+	<link rel="stylesheet" href="modules/reveal.js/dist/reveal.css">
+	<link rel="stylesheet" href="modules/ddix-assets/css/dd-ix.css">
+
+	<!-- Theme used for syntax highlighted code -->
+	<link rel="stylesheet" href="modules/reveal.js/plugin/highlight/monokai.css">
+</head>
+
+<body>
+	<div class="reveal">
+		<div class="slides">
+			<section>
+				<img src="modules/ddix-assets/img/ddix-logo-noslogan.svg">
+				<h2>Hackday #01</h2>
+				<h3>Routing Foundamentals</h3>
+			</section>
+			<section>
+				<h2>grober Fahrplan</h2>
+
+				<ol>
+					<li>Vorstellungsrunde</li>
+					<li>statisches IP Routing</li>
+					<li>dynamisches IP Routing</li>
+					<li>Provider Netzwerke</li>
+					<li>Private & Transit Peerings</li>
+				</ol>
+			</section>
+
+			<section>
+				<h2>Vorstellungsrunde</h2>
+			</section>
+
+			<section>
+				<h2>Pod Equipment</h2>
+
+				<ul>
+					<li>1x Linux Router<br /><small>Lanner NCA-1510A; 4x 1G Base-T, 2x SFP</small></li>
+					<li>1x L3 Switch oder Router<br />
+						<small>Cisco 3560CG: 10x 1G Base-T, 2x SFP(+)</small><br />
+						<small>Cisco 890 ISR: 8x 1G Base-T Switch, 2x SFP Routed Ports</small>
+					</li>
+					<li>SFP's für "WAN" Verbindungen 😉</li>
+				</ul>
+			</section>
+
+			<section>
+				<h2>Pod Setup</h2>
+
+				<img src="img/pods.drawio.svg" style="width: 100%">
+			</section>
+
+			<section>
+				<h2>Inter Pod</h2>
+
+				<img src="img/inter-pods.drawio.svg" style="width: 100%">
+			</section>
+
+			<section>
+				<h2>Default Free Zone</h2>
+
+				<img src="img/pods-dfz.drawio.svg" style="width: 100%">
+			</section>
+
+			<section>
+				<h2>statisches IP Routing</h2>
+
+				<ol>
+					<li>Konfiguration L3 Switch oder Router<br /><small>serielle (USB-)Konsole</small></li>
+					<li>Anbinden Laptops<br />
+						<small>SSH, ping, traceroute, &hellip;</small>
+					</li>
+					<li>Installation Linux Router
+						<br /><small>serielle (USB-)Konsole, USB Bootstick</small>
+					</li>
+					<li>Inter Pod Routing</li>
+				</ol>
+			</section>
+
+			<section>
+				<h3>Serielle Konsolen</h3>
+
+				<ul style="margin-bottom: 3em">
+					<li>Cisco<br /><small>9600 Baud, 8 bit, no parity, 1 stop bit (9600 8N1)</small></li>
+					<li>BIOS, Boot Loader, Linux<br /><small>112.500 Baud, 8 data bits, no parity, 1 stop
+							bits (115.200 8N1)</small></li>
+					<li><b>kein</b> Flow Control</li>
+					<li>Terminalprogramme<br />
+						<small>
+							<ul>
+								<li>Linux: minicom, screen, tmux</li>
+								<li>Windows: PuTTY</li>
+							</ul>
+						</small>
+						<pre style="width: 51%; margin: 1em 0 0 0">
+							<code data-trim>
+								$ minicom -D /dev/ttyUSB0
+							</code>
+						</pre>
+					</li>
+				</ul>
+				<img src="img/minicom.png" style="position: absolute; bottom: -.5em; right: -1.5em; width: 45%">
+			</section>
+
+			<section>
+				<h3>cisco commands</h3>
+
+				<pre>
+					<code data-trim style="max-height: 100%">
+						! change to priv lvl 15 (&rarr; "root")
+						enable
+						! change to priv lvl 1
+						disable
+
+						! show commands
+						show run
+						show int descr
+						show int status
+						show ip int brief
+						show ip route &hellip;
+						show ip arp &hellip;
+
+						! filters
+						show run | incl vlan
+						show run | excl interface
+						show run | section router ospf
+
+						! config mode
+						conf t
+
+						! save config
+						wr m
+
+						! reset config
+						erase startup-config
+						erase flash:vlan.dat
+					</code>
+				</pre>
+			</section>
+
+			<section>
+				<h3>basic cisco settings</h3>
+
+				<pre>
+					<code data-trim style="max-height: 100%">
+						! increase memory log size
+						logging buffered 65536
+
+						! local hostname
+						hostname rtr-pod5-pop1
+
+						! disable dns
+						no ip domain-lookup
+
+						! auth stuff
+						enable secret routeL0C4L
+						username roboadmin secret routeL0C4L
+						aaa new-model
+
+						! enable ntp (for later)
+						ntp server 195.248.83.255
+
+						! increase console+vty timeout
+						line con 0
+						  exec-timeout 1440 0
+						line vty 0 15
+						  exec-timeout 1440 0
+					</code>
+				</pre>
+			</section>
+
+			<section>
+				<h3>static ip config</h3>
+
+				<pre>
+					<code data-trim style="max-height: 100%">
+						interface GigabitEthernet0/2
+						 description RP 1G svr-pop5-fiasko
+						 no switchport
+						 ip address 195.248.83.? 255.255.255.254
+						 arp timeout 300
+					</code>
+				</pre>
+
+				<img src="img/pods.drawio.svg" style="width: 80%">
+			</section>
+
+
+			<section>
+				<h2>Linux Router</h2>
+			</section>
+
+			<section>
+				<h3>Alpine Linux</h3>
+
+				<ul>
+					<li>schlanke (Rolling) Linux Distro</li>
+					<li><b>muslc</b> als libc</li>
+					<li><b>BusyBox</b> als coreutils</li>
+					<li>apk als <b>deklarativer</b> Paketmanager</li>
+					<li><b>KISS</b> Prinzip (<s>sudo</s>, <s>systemd</s>)</li>
+					<li>Diskless Mode</li>
+				</ul>
+			</section>
+
+			<section>
+				<h3>Installation</h3>
+
+				<ul>
+					<li>USB-Stick booten<br /><small><a
+								href)"https://mirrors.ibh.net/ibh/alpine/iso/">https://mirrors.ibh.net/ibh/alpine/iso/</a></small>
+					</li>
+					<li>util-linux installieren<br /><small># apk add util-linux</small></li>
+					<li>SSD partitionieren<br /><small># fdisk /dev/sda</small></li>
+					<li>Diskless Installation<br /><small># setup-bootable /dev/sdb /dev/sda1</small></li>
+					<li>reboot</li>
+				</ul>
+			</section>
+
+			<section>
+				<h3>Setup</h3>
+
+				<pre class="language-bash">
+					<code data-trim style="max-height: 100%">
+						# finish installation (no networking, no remote repositories)
+						setup-alpine
+
+						# install basic tools
+						apk add ethtool ifstate tcpdump $EDITOR
+
+						# configure ifstate
+						mkdir /etc/ifstate
+						ifstate show > /etc/ifstate/config.yml
+						rc-update add ifstate
+
+						$EDITOR /etc/ifstate
+					</code>
+				</pre>
+			</section>
+
+			<section>
+				<h3>ifstate</h3>
+
+				<p>
+					https://ifstate.net/ &rarr; <a href="https://ifstate.net/examples.html">Examples</a> | <a
+						href="https://ifstate.net/schema/">Schema</a>
+					</ul>
+				<pre class="language-yaml">
+					<code data-trim style="max-height: 100%">
+						interfaces:
+						- name: eth0
+						  addresses:
+						  - 195.248.83.240/31
+						  link:
+							state: up
+							kind: physical
+							businfo: '0000:04:00.0'
+												
+						routing:
+						routes:
+						- to: 0.0.0.0/0
+						  via: 212.111.253.254
+						rules: []
+					</code>
+				</pre>
+			</section>
+
+			<section>
+				<h3>Diskless Mode</h3>
+
+				<pre class="language-bash">
+					<code data-trim style="max-height: 100%">
+						# show changes of protected files
+						#  &rarr; /etc/apk/protected_paths.d/
+						lbu status
+
+						# show changes
+						lbu diff
+
+						# make changes persistent
+						#  &rarr; /media/sda1/$HOSTNAME.apkovl.tar.gz
+						lbu commit
+					</code>
+				</pre>
+
+				<p>
+					alpine.iso + $HOSTNAME.apkovl.tar.gz &rarr; State
+				</p>
+			</section>
+
+
+			<section>
+				<h2>dynamisches<br />IP Routing</h2>
+			</section>
+
+			<section>
+				<img src="img/tracketpacer-ospf.png" height="580px">
+				<p>
+					<small><a href="https://infosec.exchange/@tracketpacer">@tracketpacer@infosec.exchange</a></small>
+				</p>
+			</section>
+
+
+			<section>
+				<h3>Cisco OSPF</h2>
+
+				<pre>
+					<code data-trim style="max-height: 100%">
+						! configure ospf router
+						router ospf 6500?
+						 router-id 195.248.83.?
+						 redistribute connected
+						 redistribute static
+						 passive-interface default
+
+						! enable ospf
+						interface GigabitEthernet0/1
+						 ip ospf 6500? area 0
+						 ip ospf dead-interval 5
+						 ip ospf hello-interval 1
+					</code>
+				</pre>
+			</section>
+
+			<section>
+				<h3>BIRD Routing Daemon</h2>
+
+				<pre class="language-bash">
+					<code data-trim style="max-height: 100%">
+						# install & enable bird
+						apk add bird
+						rc-update add bird
+
+						# configure
+						$EDITOR /etc/bird/bird.conf
+					</code>
+				</pre>
+			</section>
+
+			<section>
+				<h3>BIRD Config</h2>
+
+				<pre>
+					<code data-trim style="max-height: 100%">
+					</code>
+				</pre>
+			</section>
+
+
+			<section>
+				<h2>Provider Netze</h2>
+			</section>
+
+			<section>
+				<h3>IGP vs. EGP</h3>
+
+				<h4>Interior Gateway Protocol</h4>
+				<ul style="font-size: 80%">
+					<li>Einsatz <b>innerhalb</b> eines autonomen Systems</li>
+					<li>Austausch der Netztopologie (LSDB)</li>
+					<li>Protokoll: OSPF, EIRGP, IS-IS, &hellip;</li>
+				</ul>
+
+				<h4 style="margin-top: 2em">Exterior Gateway Protocol</h4>
+				<ul style="font-size: 80%">
+					<li>Einsatz <b>innerhalb</b> (iBGP) und <b>außerhalb</b> (eBGP)<br />eines AS</li>
+					<li>Austausch erreichbarer Prefixe (Netze)</li>
+					<li>Protokoll: BGP bzw. MP-BGP</li>
+				</ul>
+			</section>
+
+			<section>
+				<img src="img/tracketpacer-bgp.png" height="580px">
+				<p>
+					<small><a href="https://infosec.exchange/@tracketpacer">@tracketpacer@infosec.exchange</a></small>
+				</p>
+			</section>
+
+
+			<section>
+				<h3>BGP Route Selection (BIRD)</h3>
+				<ul style="font-size: 75%">
+					<li>Prefer route with the highest Local Preference attribute.</li>
+					<li>Prefer route with the shortest AS path.</li>
+					<li>Prefer IGP origin over EGP and EGP origin over incomplete.</li>
+					<li>Prefer the lowest value of the Multiple Exit Discriminator.</li>
+					<li>Prefer routes received via eBGP over ones received via iBGP.</li>
+					<li>Prefer routes with lower internal distance to a boundary router.</li>
+					<li>Prefer the route with the lowest value of router ID of the advertising router.</li>
+				</ul>
+			</section>
+		</div>
+	</div>
+
+	<script src="modules/reveal.js/dist/reveal.js"></script>
+	<script src="modules/reveal.js/plugin/notes/notes.js"></script>
+	<script src="modules/reveal.js/plugin/markdown/markdown.js"></script>
+	<script src="modules/reveal.js/plugin/highlight/highlight.js"></script>
+	<script>
+		// More info about initialization & config:
+		// - https://revealjs.com/initialization/
+		// - https://revealjs.com/config/
+		Reveal.initialize({
+			hash: true,
+
+			// Hide presentation control arrows
+			controls: false,
+
+			// Learn about plugins: https://revealjs.com/plugins/
+			plugins: [RevealMarkdown, RevealHighlight, RevealNotes]
+		});
+	</script>
+</body>
+
+</html>
