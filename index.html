@@ -238,7 +238,7 @@
 
 						# configure ifstate
 						mkdir /etc/ifstate
-						ifstate show > /etc/ifstate/config.yml
+						ifstatecli show > /etc/ifstate/config.yml
 						rc-update add ifstate
 
 						$EDITOR /etc/ifstate
